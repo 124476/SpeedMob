@@ -22,13 +22,17 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import kotlin.math.sqrt
 import kotlin.math.absoluteValue
+
 class MainActivity : ComponentActivity(), SensorEventListener {
+
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
     private val threshold = 0.5
-    private val offset = 35.31
+    private val offset = 35.21
+
     private val accelerations = mutableListOf<Double>()
     private var adjustedSpeed by mutableStateOf(0.0)
+
     private val handler = Handler(Looper.getMainLooper())
     private val updateRunnable = object : Runnable {
         override fun run() {
@@ -36,15 +40,21 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             handler.postDelayed(this, 500)
         }
     }
+
     private var kalmanFilter = KalmanFilter()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
         accelerometer?.also { acc ->
             sensorManager.registerListener(this, acc, SensorManager.SENSOR_DELAY_UI)
         }
+
         handler.postDelayed(updateRunnable, 500)
+
         setContent {
             MyApplicationTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -55,36 +65,50 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                             speed = adjustedSpeed,
                             modifier = Modifier.align(Alignment.Center)
                         )
-                        Text(
-                            text = "made ravilov/r/r",
+                        Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(16.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Light
-                        )
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "made ravilov/r/r",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Light
+                            )
+                            Spacer(modifier = Modifier.height(4.dp)) // Добавляем небольшой отступ между строками
+                            Text(
+                                text = "and Krahmalnikov I.",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Light
+                            )
+                        }
                     }
                 }
             }
         }
+
     }
+
     override fun onResume() {
         super.onResume()
         accelerometer?.also { acc ->
             sensorManager.registerListener(this, acc, SensorManager.SENSOR_DELAY_UI)
         }
     }
+
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(this)
         handler.removeCallbacks(updateRunnable)
     }
+
     override fun onSensorChanged(event: SensorEvent) {
         val newAcceleration = sqrt(
             (event.values[0] * event.values[0] +
                     event.values[1] * event.values[1] +
                     event.values[2] * event.values[2]).toDouble()
         )
+
         if (newAcceleration > threshold) {
             val filteredAcceleration = kalmanFilter.update(newAcceleration * 3.6 - offset)
             accelerations.add(filteredAcceleration)
@@ -92,21 +116,25 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             accelerations.add(0.0)
         }
     }
+
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+
     private fun calculateAndUpdateSpeed() {
         if (accelerations.isNotEmpty()) {
             val averageAcceleration = accelerations.average().absoluteValue
-            adjustedSpeed = averageAcceleration
+            adjustedSpeed = averageAcceleration * 3.08
             accelerations.clear()
         }
     }
 }
+
 class KalmanFilter {
     private var q = 0.00001
     private var r = 0.01
     private var x = 0.0
     private var p = 1.0
     private var k = 0.0
+
     fun update(measurement: Double): Double {
         p += q
         k = p / (p + r)
@@ -115,28 +143,40 @@ class KalmanFilter {
         return x
     }
 }
+
 @Composable
 fun SpeedDisplay(speed: Double, modifier: Modifier = Modifier) {
     Text(
         text = "%.2f km/h".format(speed),
-        fontSize = 38.sp,
+        fontSize = 44.sp,
         fontWeight = FontWeight.Bold
     )
 }
+
 @Preview(showBackground = true)
 @Composable
 fun SpeedDisplayPreview() {
     MyApplicationTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             SpeedDisplay(speed = 0.0, modifier = Modifier)
-            Text(
-                text = "made ravilov/r/r",
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Light
-            )
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = "made ravilov/r/r",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light
+                )
+                Spacer(modifier = Modifier.height(4.dp)) // Добавляем небольшой отступ между строками
+                Text(
+                    text = "and Krahmalnikov Ilya",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light
+                )
+            }
         }
     }
 }
